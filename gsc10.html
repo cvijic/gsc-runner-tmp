@@ -1,0 +1,42 @@
+<!doctype html><meta charset="utf-8"><title>gsc runner 10</title><pre id="o">RUNNING
+</pre>
+<script>
+const o=document.getElementById('o');
+function log(s){o.textContent+=s+'\n'}
+function b64d(s){s=decodeURIComponent(s);s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return JSON.parse(decodeURIComponent(escape(atob(s))))}
+function getCfg(){
+ let s=location.hash.slice(1);
+ if(s) return b64d(s);
+ let h='';
+ try{h=(window.parent&&parent.location&&parent.location.href)||''}catch(e){h='PARENTBLOCKED'}
+ let i=h.indexOf('%23'); if(i<0) i=h.indexOf('#');
+ if(i>=0) return b64d(h.slice(i+(h[i]==='#'?1:3)));
+ throw new Error('no config');
+}
+function compact(d){
+ if(!d||!d.rows) return d;
+ return d.rows.map(r=>({k:r.keys,c:r.clicks,i:r.impressions,ct:Math.round(r.ctr*1000)/1000,p:Math.round(r.position*10)/10}));
+}
+async function gscQuery(site, body, token){
+ const url='https://searchconsole.googleapis.com/webmasters/v3/sites/'+encodeURIComponent(site)+'/searchAnalytics/query';
+ const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const t=await r.text();
+ let d; try{d=JSON.parse(t)}catch(e){d={raw:t}}
+ return {status:r.status,rows:d.rows?compact(d):(d),meta:d.metadata||null};
+}
+async function run(){
+ try{
+  const cfg=getCfg();
+  const out={site:cfg.name,results:{}};
+  for(const j of cfg.jobs){
+   const body={startDate:j.start,endDate:j.end,dimensions:j.dims,rowLimit:j.rowLimit||1000,dataState:'all',type:'web'};
+   if(j.country) body.dimensionFilterGroups=[{filters:[{dimension:'country',operator:'equals',expression:j.country}]}];
+   try{const res=await gscQuery(cfg.site, body, cfg.token); out.results[j.label]=res;log(j.label+': '+res.status+' rows='+(res.rows&&res.rows.length||0))}
+   catch(e){out.results[j.label]={error:String(e)};log(j.label+' FAIL '+e)}
+  }
+  localStorage.setItem('res_'+cfg.name, JSON.stringify(out));
+  location.replace('https://html-preview.github.io/?url='+encodeURIComponent('https://raw.githubusercontent.com/cvijic/gsc-runner-tmp/main/reader.html'));
+ }catch(e){o.textContent='ERR '+(e&&e.stack||e)}
+}
+run();
+</script>
