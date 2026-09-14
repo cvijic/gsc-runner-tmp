@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>gsc runner</title><pre id="o">LOADING</pre>
+<script>
+const o=document.getElementById('o');
+function b64d(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return JSON.parse(decodeURIComponent(escape(atob(s))))}
+async function run(){
+ try{
+  const jobs=b64d(location.hash.slice(1));
+  const out=[];
+  for(const j of jobs){
+   const url='https://www.googleapis.com/webmasters/v3/sites/'+encodeURIComponent(j.site)+'/searchanalytics/query';
+   const body={startDate:j.start,endDate:j.end,dimensions:j.dims,rowLimit:j.rowLimit||1000,dataState:'all',type:'web'};
+   if(j.country) body.dimensionFilterGroups=[{filters:[{dimension:'country',operator:'equals',expression:j.country}]}];
+   const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+j.token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+   const t=await r.text();
+   let d; try{d=JSON.parse(t)}catch(e){d=t}
+   out.push({label:j.label,status:r.status,data:d});
+  }
+  o.textContent='DONE\n'+JSON.stringify(out);
+ }catch(e){o.textContent='ERR '+(e&&e.stack||e)}
+}
+run();
+</script>
