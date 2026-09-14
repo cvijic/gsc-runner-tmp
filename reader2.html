@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>gsc reader2</title></head><body>
+<pre id="out">loading...</pre>
+<script>
+function getKey(){
+  var h = location.hash || '';
+  if(h.length > 1) return h.slice(1);
+  try{
+    var p = parent.location.href;
+    var i = p.indexOf('%23');
+    if(i >= 0) return decodeURIComponent(p.slice(i+3));
+  }catch(e){}
+  return '';
+}
+var key = getKey();
+var out = {};
+if(key){
+  var v = localStorage.getItem(key);
+  if(v){ out[key] = JSON.parse(v); }
+  else { out.ERROR = 'key not found: ' + key; out.available = Object.keys(localStorage).filter(function(k){return k.indexOf('res_')===0;}); }
+}else{
+  Object.keys(localStorage).forEach(function(k){ if(k.indexOf('res_')===0) out[k]=JSON.parse(localStorage.getItem(k)); });
+}
+document.getElementById('out').textContent = 'RESULTS\n' + JSON.stringify(out);
+</script>
+</body></html>
