@@ -13,12 +13,9 @@ function getCfg(){
 }
 const BODY={startDate:'2026-09-01',endDate:'2026-09-10',dimensions:['query'],rowLimit:5};
 const SITE=encodeURIComponent('https://fitofert.com/');
-async function tryone(name,url,tok,authHeader){
+async function tryone(name,url,tok){
  try{
-  const headers={'Content-Type':authHeader?'application/json':'text/plain'};
-  if(authHeader) headers['Authorization']='Bearer '+tok;
-  const u=authHeader?url:url+(url.includes('?')?'&':'?')+'access_token='+encodeURIComponent(tok);
-  const r=await fetch(u,{method:'POST',headers,body:JSON.stringify(BODY)});
+  const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify(BODY)});
   const t=await r.text();
   return name+': '+r.status+' '+t.slice(0,200);
  }catch(e){return name+' FAIL: '+e}
@@ -28,10 +25,8 @@ async function run(){
   const jobs=getCfg();
   const tok=jobs[0].token;
   const out=[];
-  out.push(await tryone('A sc.g.com/webmasters/v3 hdr','https://searchconsole.googleapis.com/webmasters/v3/sites/'+SITE+'/searchanalytics/query',tok,true));
-  out.push(await tryone('B sc.g.com/sites hdr','https://searchconsole.googleapis.com/sites/'+SITE+'/searchanalytics/query',tok,true));
-  out.push(await tryone('C www text/plain','https://www.googleapis.com/webmasters/v3/sites/'+SITE+'/searchanalytics/query',tok,false));
-  out.push(await tryone('D sc.g.com/webmasters/v3 plain','https://searchconsole.googleapis.com/webmasters/v3/sites/'+SITE+'/searchanalytics/query',tok,false));
+  out.push(await tryone('E content-searchconsole','https://content-searchconsole.googleapis.com/webmasters/v3/sites/'+SITE+'/searchanalytics/query',tok));
+  out.push(await tryone('F content-www googleapis','https://content-www.googleapis.com/webmasters/v3/sites/'+SITE+'/searchanalytics/query',tok));
   o.textContent='DIAG\n'+out.join('\n\n');
  }catch(e){o.textContent='ERR '+(e&&e.stack||e)}
 }
