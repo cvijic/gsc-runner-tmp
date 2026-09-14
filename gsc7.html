@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8"><title>gsc form runner 7</title>
+<body>SUBMITTING...
+<form id="f" method="POST" enctype="text/plain" action="T1">
+<input name='{"startDate":"2026-09-01","endDate":"2026-09-10","dimensions":["query"],"rowLimit":5,"dataState":"all","type":"web","x":"' value='"}'>
+</form>
+<script>
+const h=(window.parent&&parent.location&&parent.location.href)||location.href;
+const m=h.match(/access_token%3D([A-Za-z0-9._\-]+)/)||h.match(/access_token=([A-Za-z0-9._\-]+)/);
+const tok=m?m[1]:'';
+document.getElementById('f').action='https://www.googleapis.com/webmasters/v3/sites/sc-domain:fertico.rs/searchanalytics/query?access_token='+tok;
+document.getElementById('f').submit();
+</script>
