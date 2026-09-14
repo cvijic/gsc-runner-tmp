@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>gsc analysis</title></head><body>
+<pre id="out">loading...</pre>
+<script>
+var KWS = {
+fitofert: ["folijarna djubriva","vodotopiva djubriva","kristalna npk djubriva","biostimulatori","djubriva sa aminokiselinama","djubriva sa morskim algama","mikrobioloska djubriva","djubriva za fertigaciju","kalcijum za biljke","bor za biljke","helatno gvozdje za biljke","mikroelementi za biljke","oplemenjivaci zemljista","profesionalna djubriva","prihrana biljaka","biostimulator protiv stresa biljaka","oporavak biljaka posle grada","oporavak biljaka posle mraza","zastita od toplotnog stresa","aminokiseline za oporavak","nedostatak kalcijuma kod paradajza","trulez vrha ploda paradajza","nedostatak gvozdja","hloroza lista","nedostatak bora","bolje cvetanje i oplodnja","povecanje krupnoce i kvaliteta ploda","djubrivo za cvrstinu plodova","bolje ukorenjavanje","zadrzavanje vlage u zemljistu","prihrana paradajza","prihrana paprike","prihrana krastavca","prihrana jagode","prihrana maline","prihrana borovnice","prihrana jabuke","prihrana vinove loze","prihrana tresnje i visnje","djubrivo za paradajz","djubrivo za papriku","djubrivo za jagode","djubrivo za maline","djubrivo za borovnicu","program djubrenja krompira"],
+speedfert: ["prihrana psenice i jecma","folijarno djubrivo za psenicu","folijarno djubrivo za kukuruz","prihrana kukuruza","cink za kukuruz","folijarna prihrana suncokreta","folijarna prihrana soje","djubrivo za soju","bor za suncokret","bor za uljanu repicu","prihrana uljane repice","tretman semena biostimulatorom","mikrobiolosko djubrivo za zemljiste","preparat za razgradnju zetvenih ostataka","prihrana psenice u prolece","prihrana psenice pred klasanje","povecanje proteina u psenici","hektolitarska masa","mikroelementi za psenicu","bokorenje psenice","folijarna prihrana jecma","djubrivo za kukuruz u fazi 3-6 listova","prihrana soje pre cvetanja","prihrana suncokreta u fazi 4-8 listova","sumpor za suncokret","povecanje sadrzaja ulja","prihrana uljane repice u prolece","tretman semena psenice","tretman semena kukuruza","tretman semena soje","tretman semena suncokreta"]
+};
+function getKey(){
+  var h = location.hash || '';
+  if(h.length > 1) return h.slice(1);
+  try{
+    var p = parent.location.href;
+    var i = p.indexOf('%23');
+    if(i >= 0) return decodeURIComponent(p.slice(i+3));
+  }catch(e){}
+  return '';
+}
+function norm(s){
+  return s.toLowerCase()
+    .replace(/đ/g,'dj').replace(/č/g,'c').replace(/ć/g,'c')
+    .replace(/š/g,'s').replace(/ž/g,'z')
+    .replace(/[^\w\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+function monthly(rows){
+  var m = {};
+  rows.forEach(function(r){
+    var d = r.k[0]; if(!d || d >= '2026-09-13') return;
+    var mm = d.slice(0,7);
+    if(!m[mm]) m[mm] = {c:0,i:0,pw:0};
+    m[mm].c += r.c; m[mm].i += r.i; m[mm].pw += r.p * r.i;
+  });
+  var out = [];
+  Object.keys(m).sort().forEach(function(k){
+    var v = m[k];
+    out.push({m:k, c:v.c, i:v.i, ct: v.i? Math.round(v.c/v.i*1000)/1000:0, p: v.i? Math.round(v.pw/v.i*10)/10:0});
+  });
+  return out;
+}
+function kwMatch(kwList, qrows){
+  return kwList.map(function(kw){
+    var toks = norm(kw).split(' ').filter(function(t){return t.length>1;});
+    var c=0,i=0,pw=0,bestQ=null,bestC=-1,n=0;
+    qrows.forEach(function(r){
+      var q = norm(r.k[0]);
+      var ok = toks.every(function(t){ return q.indexOf(t) >= 0; });
+      if(ok){
+        c += r.c; i += r.i; pw += r.p * r.i; n++;
+        if(r.c > bestC){ bestC = r.c; bestQ = r.k[0]; }
+      }
+    });
+    return {kw:kw, n:n, c:c, i:i, p: i? Math.round(pw/i*10)/10 : null, top: bestQ};
+  });
+}
+function cannibal(qp){
+  var byQ = {};
+  qp.forEach(function(r){
+    var q = r.k[0], pg = r.k[1];
+    if(!byQ[q]) byQ[q] = [];
+    byQ[q].push({page: pg.replace(/^https?:\/\/(www\.)?/,''), c:r.c, i:r.i, p:r.p});
+  });
+  var out = [];
+  Object.keys(byQ).forEach(function(q){
+    var pages = byQ[q].filter(function(x){return x.i >= 5;}).sort(function(a,b){return b.i-a.i;});
+    if(pages.length > 1){
+      var totI = pages.reduce(function(s,x){return s+x.i;},0);
+      var totC = pages.reduce(function(s,x){return s+x.c;},0);
+      out.push({q:q, np: pages.length, c: totC, i: totI, pages: pages.slice(0,4)});
+    }
+  });
+  out.sort(function(a,b){return b.i - a.i;});
+  return out.slice(0, 40);
+}
+var site = getKey();
+var raw = localStorage.getItem('res_' + site);
+var out = {};
+if(!raw){
+  out.ERROR = 'no data for ' + site;
+  out.available = Object.keys(localStorage).filter(function(k){return k.indexOf('res_')===0;});
+}else{
+  var D = JSON.parse(raw).results;
+  var rs = D.trend_rs.rows, gl = D.trend_global.rows;
+  function tot(rows, a, b){
+    var c=0,i=0,pw=0;
+    rows.forEach(function(r){ var d=r.k[0]; if(d>=a && d<=b){c+=r.c;i+=r.i;pw+=r.p*r.i;} });
+    return {c:c, i:i, p: i? Math.round(pw/i*10)/10:0, ct: i? Math.round(c/i*1000)/1000:0};
+  }
+  out.site = site;
+  out.totals = {
+    pre_rs: tot(rs,'2025-09-01','2026-02-28'),
+    post_rs: tot(rs,'2026-03-01','2026-09-12'),
+    pre_gl: tot(gl,'2025-09-01','2026-02-28'),
+    post_gl: tot(gl,'2026-03-01','2026-09-12')
+  };
+  out.monthly_rs = monthly(rs);
+  out.monthly_gl = monthly(gl);
+  out.top_post = D.queries_post_rs.rows.slice(0,45).map(function(r){return {q:r.k[0],c:r.c,i:r.i,p:r.p};});
+  out.kw = kwMatch(KWS[site] || [], D.queries_post_rs.rows);
+  out.kw_pre = kwMatch(KWS[site] || [], D.queries_pre_rs.rows);
+  out.cannibal = cannibal(D.qp_post_rs.rows);
+}
+document.getElementById('out').textContent = 'ANALYSIS\n' + JSON.stringify(out);
+</script>
+</body></html>
