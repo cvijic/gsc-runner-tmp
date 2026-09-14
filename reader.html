@@ -1,0 +1,10 @@
+<!doctype html><meta charset="utf-8"><title>gsc reader</title><pre id="o"></pre>
+<script>
+const o=document.getElementById('o');
+const out={};
+for(let i=0;i<localStorage.length;i++){
+ const k=localStorage.key(i);
+ if(k.startsWith('res_')){try{out[k]=JSON.parse(localStorage.getItem(k))}catch(e){out[k]='parse error'}}
+}
+o.textContent='RESULTS\n'+JSON.stringify(out);
+</script>
